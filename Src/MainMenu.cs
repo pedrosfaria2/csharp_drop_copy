@@ -48,7 +48,27 @@ namespace FixClient
 
         private static void SendResendRequest(List<FIXClient> clients)
         {
-            // Still gonna implement this
+            Console.Write("Enter BeginSeqNo: ");
+            if (!int.TryParse(Console.ReadLine(), out int beginSeqNo))
+            {
+                Console.WriteLine("Invalid BeginSeqNo. Please enter a valid integer.");
+                return;
+            }
+
+            Console.Write("Enter EndSeqNo (0 for all subsequent messages): ");
+            if (!int.TryParse(Console.ReadLine(), out int endSeqNo))
+            {
+                Console.WriteLine("Invalid EndSeqNo. Please enter a valid integer.");
+                return;
+            }
+
+            foreach (var client in clients)
+            {
+                client.SendResendRequest(beginSeqNo, endSeqNo);
+            }
+
+            Console.WriteLine("ResendRequest sent to all clients.");
+            Console.ReadLine();
         }
 
         private static void LogoutClients(List<FIXClient> clients)

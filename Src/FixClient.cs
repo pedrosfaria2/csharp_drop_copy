@@ -1,4 +1,6 @@
 using QuickFix;
+using QuickFix.Fields;
+using QuickFix.FIX44;
 using QuickFix.Transport;
 using System;
 
@@ -139,6 +141,59 @@ namespace FixClient
 
             _initiator.Stop();
             Console.WriteLine("FIX Client logged out successfully.");
+        }
+
+        public void SendResendRequest(int beginSeqNo, int endSeqNo)
+        {
+            try
+            {
+                var resendRequest = new ResendRequest();
+                resendRequest.SetField(new BeginSeqNo(beginSeqNo));
+                resendRequest.SetField(new EndSeqNo(endSeqNo));
+
+                SendMessage(resendRequest);
+                Console.WriteLine($"ResendRequest sent for sequence numbers {beginSeqNo} to {endSeqNo}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error sending ResendRequest from {beginSeqNo} to {endSeqNo}: {e.Message}");
+                throw;
+            }
+        }
+
+        private void SendMessage(QuickFix.FIX44.Message message)
+        {
+            try
+            {
+                var sessionID = _initiator?.GetSessionIDs().ToArray()[0];
+                if (sessionID == null)
+                {
+                    Console.WriteLine("SessionID not found. Cannot send message.");
+                    return;
+                }
+
+                MsgType msgType = new();
+                message.Header.GetField(msgType);
+
+                var sendingTime = new SendingTime(DateTime.ParseExact(DateTime.UtcNow.ToString("yyyyMMdd-HH:mm:ss.fff"), "yyyyMMdd-HH:mm:ss.fff", null));
+                message.Header.SetField(sendingTime);
+
+                if (msgType.getValue() == MsgType.SEQUENCE_RESET || msgType.getValue() == MsgType.RESEND_REQUEST)
+                {
+                    var origSendingTime = new OrigSendingTime(DateTime.ParseExact(DateTime.UtcNow.ToString("yyyyMMdd-HH:mm:ss.fff"), "yyyyMMdd-HH:mm:ss.fff", null));
+                    message.SetField(origSendingTime);
+
+                    message.SetField(new PossDupFlag(true));
+                }
+
+                Session.SendToTarget(message, sessionID);
+                Console.WriteLine($"Message sent to target: {message}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error sending message: {e.Message}");
+                throw;
+            }
         }
     }
 }
