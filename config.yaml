@@ -1,0 +1,5 @@
+sessions:
+  - configFile: "data/config6.cfg"
+  - configFile: "data/config7.cfg"
+  - configFile: "data/config8.cfg"
+  - configFile: "data/config9.cfg"
