@@ -65,8 +65,68 @@ namespace FixClient
                 return;
             }
 
-            _initiator.Start();
-            Console.WriteLine("FIX Client logged on successfully.");
+            Console.WriteLine("Attempting logon with the primary host...");
+            if (TryLogon())
+            {
+                Console.WriteLine("FIX Client logged on successfully to the primary host.");
+                return;
+            }
+
+            Console.WriteLine("Primary host logon failed. Attempting logon with the secondary host...");
+            SwitchToSecondaryHost();
+
+            if (TryLogon())
+            {
+                Console.WriteLine("FIX Client logged on successfully to the secondary host.");
+            }
+            else
+            {
+                Console.WriteLine("Logon failed for both primary and secondary hosts.");
+            }
+        }
+
+        private bool TryLogon()
+        {
+            try
+            {
+                _initiator?.Start();
+
+                for (int i = 0; i < 10; i++)
+                {
+                    if (_initiator?.IsLoggedOn == true)
+                    {
+                        return true;
+                    }
+                    System.Threading.Thread.Sleep(1000);
+                }
+
+                _initiator?.Stop();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Logon attempt failed: {e.Message}");
+            }
+
+            return false;
+        }
+
+        private void SwitchToSecondaryHost()
+        {
+            foreach (var sessionID in _settings.GetSessions())
+            {
+                var sessionSettings = _settings.Get(sessionID);
+
+                if (sessionSettings.Has("socketconnecthostsecondary"))
+                {
+                    var secondaryHost = sessionSettings.GetString("socketconnecthostsecondary");
+                    sessionSettings.SetString("SocketConnectHost", secondaryHost);
+                    Console.WriteLine($"Switched to secondary host: {secondaryHost}");
+                }
+                else
+                {
+                    Console.WriteLine($"No secondary host found in session {sessionID}");
+                }
+            }
         }
 
         public void Logout()
